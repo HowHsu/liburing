@@ -151,6 +151,7 @@ test_srcs := \
 	unlink.c \
 	wakeup-hang.c \
 	skip-cqe.c \
+	zc_receive.c \
 	# EOL
 
 
@@ -220,6 +221,7 @@ ring-leak2: override LDFLAGS += -lpthread
 poll-mshot-update: override LDFLAGS += -lpthread
 exit-no-cleanup: override LDFLAGS += -lpthread
 pollfree: override LDFLAGS += -lpthread
+zc_receive: override LDFLAGS += -lpthread
 
 install: $(test_targets) runtests.sh runtests-loop.sh
 	$(INSTALL) -D -d -m 755 $(datadir)/liburing-test/
