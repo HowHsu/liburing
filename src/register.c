@@ -293,3 +293,11 @@ int io_uring_unregister_ring_fd(struct io_uring *ring)
 	}
 	return ret;
 }
+
+int io_uring_register_iowq_fixed_workers(struct io_uring *ring,
+					 struct io_uring_fixed_worker_arg *val)
+{
+	return ____sys_io_uring_register(ring->ring_fd,
+					 IORING_REGISTER_IOWQ_FIXED_WORKERS, val,
+					 2);
+}

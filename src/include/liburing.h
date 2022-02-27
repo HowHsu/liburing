@@ -177,6 +177,8 @@ int io_uring_register_iowq_max_workers(struct io_uring *ring,
 				       unsigned int *values);
 int io_uring_register_ring_fd(struct io_uring *ring);
 int io_uring_unregister_ring_fd(struct io_uring *ring);
+int io_uring_register_iowq_fixed_workers(struct io_uring *ring,
+				struct io_uring_fixed_worker_arg *values);
 
 /*
  * Helper for the peek/wait single cqe functions. Exported because of that,
