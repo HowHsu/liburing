@@ -100,6 +100,7 @@ test_srcs := \
 	multicqes_drain.c \
 	nop-all-sizes.c \
 	nop.c \
+	nop_wqe.c \
 	openat2.c \
 	open-close.c \
 	open-direct-link.c \
