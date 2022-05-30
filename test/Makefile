@@ -110,6 +110,7 @@ test_srcs := \
 	pipe-eof.c \
 	pipe-reuse.c \
 	poll.c \
+	poll-async.c \
 	poll-cancel.c \
 	poll-cancel-all.c \
 	poll-cancel-ton.c \
