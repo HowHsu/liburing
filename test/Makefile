@@ -145,6 +145,7 @@ test_srcs := \
 	socket-rw-eagain.c \
 	socket-rw-offset.c \
 	splice.c \
+	splice_p2p.c \
 	sq-full.c \
 	sq-full-cpp.cc \
 	sqpoll-cancel-hang.c \
