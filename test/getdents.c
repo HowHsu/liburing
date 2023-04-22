@@ -51,10 +51,11 @@ static struct io_uring ring;
 static struct list active = LIST_INIT(active);
 static int sqes_in_flight = 0;
 static int num_dir_entries = 0;
+static bool rewind_done = false;
 
 /* Forward declarations. */
 static void drain_cqes(void);
-static void schedule_readdir(struct dir *dir);
+static void schedule_readdir(struct dir *dir, int flags);
 
 /* List helper functions. */
 static inline void list_add_tail(struct list *l, struct list *head)
@@ -156,15 +157,15 @@ static void opendir_completion(struct dir *dir, int ret)
 	}
 
 	dir->fd = ret;
-	schedule_readdir(dir);
+	schedule_readdir(dir, 0);
 }
 
-static void schedule_readdir(struct dir *dir)
+static void schedule_readdir(struct dir *dir, int flags)
 {
 	struct io_uring_sqe *sqe;
 
 	sqe = get_sqe();
-	io_uring_prep_getdents(sqe, dir->fd, dir->buf, sizeof(dir->buf), 0);
+	io_uring_prep_getdents(sqe, dir->fd, dir->buf, sizeof(dir->buf), flags);
 	io_uring_sqe_set_data(sqe, dir);
 }
 
@@ -185,6 +186,12 @@ static void readdir_completion(struct dir *dir, int ret)
 	}
 
 	if (ret == 0) {
+		/* for root entry (no parent): rewind once */
+		if (!dir->parent && !rewind_done) {
+			schedule_readdir(dir, IORING_GETDENTS_REWIND);
+			rewind_done = true;
+			return;
+		}
 		free(dir);
 		return;
 	}
@@ -200,13 +207,14 @@ static void readdir_completion(struct dir *dir, int ret)
 		if (strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
 			if (dent->d_type == DT_DIR)
 				schedule_opendir(dir, dent->d_name);
+			printf("%s\n", dent->d_name);
 		}
 
 		bufp += dent->d_reclen;
 		++num_dir_entries;
 	}
 
-	schedule_readdir(dir);
+	schedule_readdir(dir, 0);
 }
 
 int main(int argc, char *argv[])
