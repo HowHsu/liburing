@@ -1125,6 +1125,14 @@ IOURINGINLINE void io_uring_prep_socket_direct_alloc(struct io_uring_sqe *sqe,
 	__io_uring_set_target_fixed_file(sqe, IORING_FILE_INDEX_ALLOC - 1);
 }
 
+static inline void io_uring_prep_getdents(struct io_uring_sqe *sqe, int fd,
+					  void *buf, unsigned int count,
+					  int flags)
+{
+	io_uring_prep_rw(IORING_OP_GETDENTS, sqe, fd, buf, count, 0);
+	sqe->getdents_flags = (__u32) flags;
+}
+
 /*
  * Returns number of unconsumed (if SQPOLL) or unsubmitted entries exist in
  * the SQ ring
