@@ -34,6 +34,7 @@ struct dir {
 
 	struct dir	*parent;
 	int		fd;
+	int		ref;
 	uint8_t		buf[BUFFER_SIZE];
 	char		name[0];
 };
@@ -134,8 +135,11 @@ static void schedule_opendir(struct dir *parent, const char *name)
 		exit(EXIT_FAILURE);
 	}
 
+	if (parent)
+		parent->ref++;
 	dir->parent = parent;
 	dir->fd = -1;
+	dir->ref = 1;
 	memcpy(dir->name, name, len);
 	dir->name[len] = 0;
 
@@ -148,15 +152,34 @@ static void schedule_opendir(struct dir *parent, const char *name)
 	io_uring_sqe_set_data(sqe, dir);
 }
 
+static void schedule_close(struct dir *dir)
+{
+	struct io_uring_sqe *sqe;
+
+	sqe = get_sqe();
+	io_uring_prep_close(sqe, dir->fd);
+	io_uring_sqe_set_data(sqe, dir);
+	dir->fd = -2;
+}
+
+static void dir_deref(struct dir *dir)
+{
+	dir->ref--;
+	if (dir->ref == 0)
+		schedule_close(dir);
+}
+
 static void opendir_completion(struct dir *dir, int ret)
 {
 	if (ret < 0) {
-		fprintf(stderr, "error opening ");
-		fprintf(stderr, ": %s\n", strerror(-ret));
+		fprintf(stderr, "error opening %s: %s\n",
+			dir->name, strerror(-ret));
 		return;
 	}
 
 	dir->fd = ret;
+	if (dir->parent)
+		dir_deref(dir->parent);
 	schedule_readdir(dir, 0);
 }
 
@@ -180,8 +203,7 @@ static void readdir_completion(struct dir *dir, int ret)
 			no_getdents = 1;
 			return;
 		}
-		fprintf(stderr, "error reading ");
-		fprintf(stderr, ": %s (%d)\n", strerror(-ret), ret);
+		fprintf(stderr, "error readdir %s: %s", dir->name, strerror(-ret));
 		return;
 	}
 
@@ -192,7 +214,7 @@ static void readdir_completion(struct dir *dir, int ret)
 			rewind_done = true;
 			return;
 		}
-		free(dir);
+		dir_deref(dir);
 		return;
 	}
 
@@ -262,6 +284,8 @@ int main(int argc, char *argv[])
 
 			if (dir->fd == -1)
 				opendir_completion(dir, dir->ret);
+			else if (dir->fd == -2)
+				free(dir);
 			else
 				readdir_completion(dir, dir->ret);
 			if (no_getdents) {
