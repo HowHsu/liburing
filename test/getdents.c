@@ -13,7 +13,7 @@
 
 static int no_getdents;
 
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 65536
 
 #define LIST_INIT(name) { &(name), &(name) }
 
