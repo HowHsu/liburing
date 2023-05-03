@@ -32,6 +32,7 @@ struct list {
 struct dir {
 	struct list	list;
 	int		ret;
+	__u32		flags;
 
 	struct dir	*parent;
 	int		fd;
@@ -54,6 +55,12 @@ static struct list active = LIST_INIT(active);
 static int sqes_in_flight = 0;
 static int num_dir_entries = 0;
 static bool rewind_done = false;
+
+static struct options {
+	bool check_cqe_eof;
+	bool async_getdent;
+	bool print;
+} options;
 
 /* Forward declarations. */
 static void drain_cqes(void);
@@ -116,6 +123,7 @@ static void drain_cqes(void)
 
 		list_add_tail(&dir->list, &active);
 		dir->ret = cqe->res;
+		dir->flags = cqe->flags;
 
 		count++;
 	}
@@ -190,7 +198,20 @@ static void schedule_readdir(struct dir *dir, int flags)
 
 	sqe = get_sqe();
 	io_uring_prep_getdents(sqe, dir->fd, dir->buf, sizeof(dir->buf), flags);
+	if (options.async_getdent)
+		sqe->flags |= IOSQE_ASYNC;
 	io_uring_sqe_set_data(sqe, dir);
+}
+
+static void readdir_done(struct dir *dir)
+{
+	/* for root entry (no parent): rewind once */
+	if (!dir->parent && !rewind_done) {
+		schedule_readdir(dir, IORING_GETDENTS_REWIND);
+		rewind_done = true;
+		return;
+	}
+	dir_deref(dir);
 }
 
 static void readdir_completion(struct dir *dir, int ret)
@@ -209,13 +230,9 @@ static void readdir_completion(struct dir *dir, int ret)
 	}
 
 	if (ret == 0) {
-		/* for root entry (no parent): rewind once */
-		if (!dir->parent && !rewind_done) {
-			schedule_readdir(dir, IORING_GETDENTS_REWIND);
-			rewind_done = true;
-			return;
-		}
-		dir_deref(dir);
+		if (options.check_cqe_eof)
+			printf("flag wasn't set early for %s\n", dir->name);
+		readdir_done(dir);
 		return;
 	}
 
@@ -230,22 +247,38 @@ static void readdir_completion(struct dir *dir, int ret)
 		if (strcmp(dent->d_name, ".") && strcmp(dent->d_name, "..")) {
 			if (dent->d_type == DT_DIR)
 				schedule_opendir(dir, dent->d_name);
-			printf("%s\n", dent->d_name);
+			if (options.print)
+				printf("%s\n", dent->d_name);
 		}
 
 		bufp += dent->d_reclen;
 		++num_dir_entries;
 	}
 
-	schedule_readdir(dir, 0);
+	if (options.check_cqe_eof && (dir->flags & IORING_CQE_F_EOF))
+		readdir_done(dir);
+	else
+		schedule_readdir(dir, 0);
 }
 
 int main(int argc, char *argv[])
 {
 	struct rlimit rlim;
 
-	if (argc > 1)
-		return 0;
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "norewind")) {
+			rewind_done = true;
+		} else if (!strcmp(argv[i], "cqe_eof")) {
+			options.check_cqe_eof = true;
+		} else if (!strcmp(argv[i], "async")) {
+			options.async_getdent = true;
+		} else if (!strcmp(argv[i], "print")) {
+			options.print = true;
+		} else {
+			printf("Supported options: norewind cqe_eof async print\n");
+			return 1;
+		}
+	}
 
 	/* Increase number of files rlimit to 1M. */
 	if (getrlimit(RLIMIT_NOFILE, &rlim) < 0) {
