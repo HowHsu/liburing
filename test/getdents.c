@@ -14,6 +14,7 @@
 static int no_getdents;
 
 #define BUFFER_SIZE 65536
+#define RING_SIZE 256
 
 #define LIST_INIT(name) { &(name), &(name) }
 
@@ -260,7 +261,7 @@ int main(int argc, char *argv[])
 		setrlimit(RLIMIT_NOFILE, &rlim);
 	}
 
-	if (io_uring_queue_init(256, &ring, 0) < 0) {
+	if (io_uring_queue_init(RING_SIZE, &ring, IORING_SETUP_SINGLE_ISSUER) < 0) {
 		perror("io_uring_queue_init");
 		return 1;
 	}
