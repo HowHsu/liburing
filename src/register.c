@@ -251,6 +251,16 @@ int io_uring_register_iowq_max_workers(struct io_uring *ring, unsigned int *val)
 	return do_register(ring, IORING_REGISTER_IOWQ_MAX_WORKERS, val, 2);
 }
 
+int io_uring_register_iowq_fixed_workers(struct io_uring *ring, void *val)
+{
+	return do_register(ring, IORING_REGISTER_IOWQ_FIXED_WORKERS, val, 2);
+}
+
+int io_uring_unregister_iowq_fixed_workers(struct io_uring *ring)
+{
+	return do_register(ring, IORING_UNREGISTER_IOWQ_FIXED_WORKERS, NULL, 0);
+}
+
 int io_uring_register_ring_fd(struct io_uring *ring)
 {
 	struct io_uring_rsrc_update up = {

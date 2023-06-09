@@ -523,6 +523,8 @@ enum {
 	/* register a range of fixed file slots for automatic slot allocation */
 	IORING_REGISTER_FILE_ALLOC_RANGE	= 25,
 
+	IORING_REGISTER_IOWQ_FIXED_WORKERS	= 26,
+	IORING_UNREGISTER_IOWQ_FIXED_WORKERS	= 27,
 	/* this goes last */
 	IORING_REGISTER_LAST,
 

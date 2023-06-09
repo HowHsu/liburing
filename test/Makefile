@@ -193,6 +193,7 @@ test_srcs := \
 	version.c \
 	wakeup-hang.c \
 	xattr.c \
+	register_fixed_workers.c \
 	# EOL
 
 all_targets :=
