@@ -93,6 +93,7 @@ test_srcs := \
 	fsnotify.c \
 	fsync.c \
 	getdents.c \
+	getdents2.c \
 	hardlink.c \
 	io-cancel.c \
 	iopoll.c \
