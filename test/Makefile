@@ -195,6 +195,7 @@ test_srcs := \
 	version.c \
 	wakeup-hang.c \
 	xattr.c \
+	lseek.c \
 	# EOL
 
 all_targets :=
