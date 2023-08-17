@@ -1151,6 +1151,12 @@ IOURINGINLINE void io_uring_prep_cmd_sock(struct io_uring_sqe *sqe,
 	sqe->cmd_op = cmd_op;
 }
 
+IOURINGINLINE void io_uring_prep_getdents(struct io_uring_sqe *sqe,
+					  int fd, void *addr, unsigned len)
+{
+	io_uring_prep_rw(IORING_OP_GETDENTS, sqe, fd, addr, len, 0);
+}
+
 /*
  * Returns number of unconsumed (if SQPOLL) or unsubmitted entries exist in
  * the SQ ring
